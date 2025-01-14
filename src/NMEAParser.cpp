@@ -109,7 +109,7 @@ void trim(string& str){
 
 
 NMEAParser::NMEAParser() 
-: log(false)
+: logInfo(false), logWarn(false)
 , maxbuffersize(NMEA_PARSER_MAX_BUFFER_SIZE)
 , fillingbuffer(false)
 { }
@@ -195,12 +195,12 @@ void NMEAParser::readLine(string cmd){
 
 // Loggers
 void NMEAParser::onInfo(NMEASentence& nmea, string txt){
-	if (log){
+	if (logInfo){
 		cout << "[Info]    " << txt << endl;
 	}
 }
 void NMEAParser::onWarning(NMEASentence& nmea, string txt){
-	if (log){
+	if (logWarn || logInfo){
 		cout << "[Warning] " << txt << endl;
 	}
 }
@@ -341,6 +341,9 @@ void NMEAParser::parseText(NMEASentence& nmea, string txt){
 	else
 	{
 		startbyte = dollar;
+		if(startbyte != 0) {
+			onWarning(nmea, string("NMEA sentence should start with '$': " + txt));
+		}
 	}
 
 

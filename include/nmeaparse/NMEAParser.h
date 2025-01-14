@@ -100,7 +100,8 @@ public:
 	NMEAParser();
 	virtual ~NMEAParser();
 
-	bool log;
+	bool logInfo;
+	bool logWarn;
 
 	Event<void(const NMEASentence&)> onSentence;				// called every time parser receives any NMEA sentence
 	void setSentenceHandler(std::string cmdKey, std::function<void(const NMEASentence&)> handler);	//one handler called for any named sentence where name is the "cmdKey"

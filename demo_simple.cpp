@@ -23,7 +23,8 @@ int main(int argc, char** argv){
 	// Create a GPS service that will keep track of the fix data.
 	NMEAParser parser;
 	GPSService gps(parser);
-	parser.log = false;
+	parser.logInfo = false;
+	parser.logWarn = true;
 	
 	cout << "Fix  Sats  Sig\t\tSpeed    Dir  Lat         , Lon           Accuracy" << endl;
 	// Handle any changes to the GPS Fix... This is called whenever it's updated.
