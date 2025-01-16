@@ -15,6 +15,7 @@
 #include <string>
 #include <chrono>
 #include <vector>
+#include <unordered_map>
 #include <cmath>
 #include <sstream>
 
@@ -57,24 +58,25 @@ namespace nmea {
 	class GPSAlmanac {
 		friend GPSService;
 	private:
-		uint32_t visibleSize;
+		std::string talkerSignalId;
 		uint32_t lastPage;
 		uint32_t totalPages;
 		uint32_t processedPages;
 		void clear();			//will remove all information from the satellites
-		void updateSatellite(GPSSatellite sat);
+		void addSatellite(GPSSatellite sat);
 	public:
-		GPSAlmanac() :
+		GPSAlmanac(std::string id) :
 			lastPage(0),
 			totalPages(0),
-			processedPages(0)
-		{};
+			processedPages(0),
+			visibleSatelites(0)
+		{
+			talkerSignalId = id;
+		};
 
 		//mapped by prn
 		std::vector<GPSSatellite> satellites;
-		double averageSNR();
-		double minSNR();
-		double maxSNR();
+		uint32_t visibleSatelites;
 		double percentComplete();
 
 	};
@@ -130,15 +132,12 @@ namespace nmea {
 
 		bool haslock;
 		bool setlock(bool b);		//returns true if lock status **changed***, false otherwise.
-
-
 	public:
 
 		GPSFix();
 		virtual ~GPSFix();
 
-
-		GPSAlmanac almanac;
+		std::unordered_map<std::string, nmea::GPSAlmanac> almanacTable;
 		GPSTimestamp timestamp;
 
 		char status;		// Status: A=active, V=void (not locked)
@@ -169,8 +168,10 @@ namespace nmea {
 		double longitude;		// degrees E
 		double speed;			// km/h
 		double travelAngle;		// degrees true north (0-360)
-		int32_t trackingSatellites;
-		int32_t visibleSatellites;
+		uint32_t trackingSatellites;
+
+		double diffAge;
+		std::string diffStation;
 
 		bool locked();
 		double horizontalAccuracy();
@@ -183,6 +184,12 @@ namespace nmea {
 		operator std::string();
 
 		static std::string travelAngleToCompassDirection(double deg, bool abbrev = false);
+
+		uint32_t visibleSatellites();
+		double averageSNR();
+		double minSNR();
+		double maxSNR();
+		double almanacPercentComplete();
 	};
 
 }

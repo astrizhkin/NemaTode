@@ -19,6 +19,8 @@
 
 namespace nmea {
 
+const auto talkerIds = {"GA", "GB", "GL", "GN", "GP", "GQ"};
+
 class GPSService {
 private:
 

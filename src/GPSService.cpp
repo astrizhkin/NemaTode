@@ -19,10 +19,6 @@ using namespace std::chrono;
 
 using namespace nmea;
 
-namespace {
-	const auto talkerIds = {"GA", "GB", "GL", "GN", "GP", "GQ"};
-}
-
 // ------ Some helpers ----------
 // Takes the NMEA lat/long format (dddmm.mmmm, [N/S,E/W]) and converts to degrees N,E only
 double convertLatLongToDeg(string llstr, string dir){
@@ -195,9 +191,6 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 
 		// TRACKING SATELLITES
 		this->fix.trackingSatellites = (int32_t)parseInt(nmea.parameters[6]);
-		if (this->fix.visibleSatellites < this->fix.trackingSatellites){
-			this->fix.visibleSatellites = this->fix.trackingSatellites;		// the visible count is in another sentence.
-		}
 
 		// ALTITUDE
 		if (!nmea.parameters[8].empty()){
@@ -206,6 +199,9 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 		else {
 			// leave old value
 		}
+
+		this->fix.diffAge = parseDouble(nmea.parameters[12]);
+		this->fix.diffStation = nmea.parameters[13];
 
 		//calling handlers
 		if (lockupdate){
@@ -372,6 +368,7 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 	[5] 083          Azimuth, degrees
 	[6] 46           SNR - higher is better
 	[...]   for up to 4 satellites per sentence
+	[17] B           signalId (1,2,3,4,5,6,7,8,B) in NMEA 4.11
 	[17] *75          the checksum data, always begins with *
 	*/
 
@@ -381,30 +378,56 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 			throw NMEAParseError("Checksum is invalid!");
 		}
 
-		// can't do this check because the length varies depending on satallites...
-		//if(nmea.parameters.size() < 18){
-		//	throw NMEAParseError("GPS data is missing parameters.");
-		//}
-
+		std::string talkerId = nmea.name.substr(0,2);
+		
+		//check if message has signalId avaliable in NMEA 4.10+
+		std::string signalId = (nmea.parameters.size() - 3)%4==0 ? "" : nmea.parameters[nmea.parameters.size()-1];
+		std::string talkerSignalId = std::string(talkerId + signalId);
+		auto almanacEntry=fix.almanacTable.find(talkerSignalId);
+		if (almanacEntry==fix.almanacTable.end()) {
+			fix.almanacTable.insert(make_pair(talkerSignalId, GPSAlmanac(talkerSignalId)));
+		}
+		GPSAlmanac& almanac = fix.almanacTable.at(talkerSignalId);
+		
 		// VISIBLE SATELLITES
-		this->fix.visibleSatellites = (int32_t)parseInt(nmea.parameters[2]);
-		if (this->fix.trackingSatellites == 0){
-			this->fix.visibleSatellites = 0;			// if no satellites are tracking, then none are visible!
-		}												// Also NMEA defaults to 12 visible when chip powers on. Obviously not right.
-
 		uint32_t totalPages = (uint32_t)parseInt(nmea.parameters[0]);
 		uint32_t currentPage = (uint32_t)parseInt(nmea.parameters[1]);
-
+		uint32_t visibleSatellites = (int32_t)parseInt(nmea.parameters[2]);
 
 		//if this is the first page, then reset the almanac
 		if (currentPage == 1){
-			this->fix.almanac.clear();
+			almanac.clear();
 			//cout << "CLEARING ALMANAC" << endl;
+			almanac.totalPages = totalPages;
+			almanac.visibleSatelites = visibleSatellites;
+		}else{
+			if(currentPage!=(almanac.lastPage+1)){
+				almanac.clear();
+				std::ostringstream msg;
+  				msg << "Expected almanac " << talkerSignalId << " next page " << (almanac.lastPage+1) << " do not match input " << currentPage;
+				throw NMEAParseError(msg.str());
+			}
+			if(totalPages!=(almanac.totalPages)){
+				almanac.clear();
+				std::ostringstream msg;
+  				msg << "Expected almanac " << talkerSignalId << " total pages " << (almanac.totalPages) << " do not match input " << totalPages;
+				throw NMEAParseError(msg.str());
+			}
+			if(currentPage > almanac.totalPages) {
+				almanac.clear();
+				std::ostringstream msg;
+  				msg << "Income almanac " << talkerSignalId << " page " << currentPage << " exceed expected limit " << almanac.totalPages;
+				throw NMEAParseError(msg.str());
+			}
+			if(visibleSatellites!=almanac.visibleSatelites) {
+				almanac.clear();
+				std::ostringstream msg;
+  				msg << "Expected almanac " << talkerSignalId << " visible satelites " << (almanac.visibleSatelites) << " do not match input " << visibleSatellites;
+				throw NMEAParseError(msg.str());
+			}
 		}
 
-		this->fix.almanac.lastPage = currentPage;
-		this->fix.almanac.totalPages = totalPages;
-		this->fix.almanac.visibleSize = this->fix.visibleSatellites;
+		almanac.lastPage = currentPage;
 
 		int entriesInPage = (nmea.parameters.size() - 3) >> 2;	//first 3 are not satellite info
 		//- entries come in 4-ples, and truncate, so used shift
@@ -419,20 +442,21 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 			sat.snr = (uint32_t)parseInt(nmea.parameters[prop + 3]);
 
 			//cout << "ADDING SATELLITE ::" << sat.toString() << endl;
-			this->fix.almanac.updateSatellite(sat);
+			almanac.addSatellite(sat);
 		}
 
-		this->fix.almanac.processedPages++;
-
-		// 
-		if (this->fix.visibleSatellites == 0){
-			this->fix.almanac.clear();
-		}
-
+		almanac.processedPages++;
 
 		//cout << "ALMANAC FINISHED page " << this->fix.almanac.processedPages << " of " << this->fix.almanac.totalPages << endl;
-		this->onUpdate();
-
+		if (almanac.lastPage == almanac.totalPages) {
+			if(almanac.visibleSatelites != almanac.satellites.size()) {
+				almanac.clear();
+				std::ostringstream msg;
+  				msg << "Expected almanac " << talkerSignalId << " visible satelates received " << almanac.satellites.size() << " do not match declared " << almanac.visibleSatelites;
+				throw NMEAParseError(msg.str());
+			}
+			this->onUpdate();
+		}
 	}
 	catch (NumberConversionError& ex)
 	{

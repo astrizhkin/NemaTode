@@ -8,6 +8,7 @@
  */
 
 #include <nmeaparse/GPSFix.h>
+#include <nmeaparse/GPSService.h>
 #include <cmath>
 #include <string>
 #include <sstream>
@@ -49,15 +50,10 @@ void GPSAlmanac::clear(){
 	lastPage = 0;
 	totalPages = 0;
 	processedPages = 0;
-	visibleSize = 0;
+	visibleSatelites = 0;
 	satellites.clear();
 }
-void GPSAlmanac::updateSatellite(GPSSatellite sat){
-	if (satellites.size() > visibleSize)
-	{	//we missed the new almanac start page, start over.
-		clear();
-	}
-
+void GPSAlmanac::addSatellite(GPSSatellite sat){
 	satellites.push_back(sat);
 }
 double GPSAlmanac::percentComplete(){
@@ -67,58 +63,6 @@ double GPSAlmanac::percentComplete(){
 
 	return ((double)processedPages) / ((double)totalPages) * 100.0;
 }
-double GPSAlmanac::averageSNR(){
-
-	double avg = 0;
-	double relevant = 0;
-	for (const auto& satellite : satellites){
-		if (satellite.snr > 0){
-			relevant += 1.0;
-		}
-	}
-
-	for (const auto& satellite : satellites){
-		if (satellite.snr > 0){
-			avg += satellite.snr / relevant;
-		}
-	}
-
-	return avg;
-}
-double GPSAlmanac::minSNR(){
-	double min = 9999999;
-	if (satellites.empty()){
-		return 0;
-	}
-	int32_t num_over_zero = 0;
-	for (const auto& satellite : satellites){
-		if (satellite.snr > 0){
-			num_over_zero++;
-			if (satellite.snr < min){
-				min = satellite.snr;
-			}
-		}
-	}
-	if (num_over_zero == 0){
-		return 0;
-	}
-	return min;
-}
-
-double GPSAlmanac::maxSNR(){
-	double max = 0;
-	for (const auto& satellite : satellites){
-		if (satellite.snr > 0){
-			if (satellite.snr > max){
-				max = satellite.snr;
-			}
-		}
-	}
-	return max;
-}
-
-
-
 
 // ===========================================================
 // ======================== GPS TIMESTAMP ====================
@@ -234,10 +178,8 @@ GPSFix::GPSFix() {
 	speed = 0;
 	travelAngle = 0;
 	altitude = 0;
+
 	trackingSatellites = 0;
-	visibleSatellites = 0;
-
-
 }
 
 GPSFix::~GPSFix() {
@@ -338,6 +280,83 @@ std::string GPSFix::travelAngleToCompassDirection(double deg, bool abbrev){
 	
 };
 
+double GPSFix::averageSNR(){
+
+	double avg = 0;
+	double relevant = 0;
+	for (const auto& almanac : almanacTable) {
+		for (const auto& satellite : almanac.second.satellites){
+			if (satellite.snr > 0){
+				relevant += 1.0;
+			}
+		}
+	}
+
+	for (const auto& almanac : almanacTable) {
+		for (const auto& satellite : almanac.second.satellites){
+			if (satellite.snr > 0){
+				avg += satellite.snr / relevant;
+			}
+		}
+	}
+
+	return avg;
+}
+double GPSFix::minSNR(){
+	double min = 9999999;
+	if (almanacTable.empty()){
+		return 0;
+	}
+	int32_t num_over_zero = 0;
+	for (const auto& almanac : almanacTable) {
+		for (const auto& satellite : almanac.second.satellites){
+			if (satellite.snr > 0){
+				num_over_zero++;
+				if (satellite.snr < min){
+					min = satellite.snr;
+				}
+			}
+		}
+	}
+	if (num_over_zero == 0){
+		return 0;
+	}
+	return min;
+}
+
+double GPSFix::maxSNR(){
+	double max = 0;
+	for (const auto& almanac : almanacTable) {
+		for (const auto& satellite : almanac.second.satellites){
+			if (satellite.snr > 0){
+				if (satellite.snr > max){
+					max = satellite.snr;
+				}
+			}
+		}
+	}
+	return max;
+}
+
+uint32_t GPSFix::visibleSatellites() {
+	uint32_t visibleSatelitesNum = 0;
+	for (const auto& almanac : almanacTable) {
+		visibleSatelitesNum+=almanac.second.visibleSatelites;
+	}
+	return visibleSatelitesNum;
+}
+
+double GPSFix::almanacPercentComplete() {
+	if(almanacTable.empty()){
+		return 0;
+	}
+	double percentComplete = 0;
+	for (auto& almanac : almanacTable) {
+		percentComplete+=almanac.second.percentComplete();
+	}	
+	return percentComplete/almanacTable.size();
+}
+
 
 std::string fixStatusToString(char status){
 	switch (status){
@@ -388,7 +407,7 @@ std::string GPSFix::toString(){
 
 	ss << "========================== GPS FIX ================================" << endl
 		<< " Status: \t\t" << ((haslock) ? "LOCK!" : "SEARCHING...") << endl
-		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << visibleSatellites << " (visible)" << endl
+		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << visibleSatellites() << " (visible)" << endl
 		<< " < Fix Details >" << endl
 		<< "   Age:                " << timeSinceLastUpdate().count() << " s" << endl
 		<< "   Timestamp:          " << timestamp.toString() << "   UTC   \n\t\t\t(raw: " << timestamp.rawTime << " time, " << timestamp.rawDate << " date)" << endl
@@ -398,6 +417,7 @@ std::string GPSFix::toString(){
 		<< "   Lat/Lon (N,E):      " << setprecision(6) << fixed << latitude << "' N, " << longitude << "' E" <<  endl;
 
 	ss.flags(oldflags);  //reset
+	ss << "   Diff (age, id):               " << diffAge << "s, " << diffStation << endl;
 
 	ss << "   DOP (P,H,V):        " << dilution << ",   " << horizontalDilution << ",   " << verticalDilution << endl
 		<< "   Error(lat,lon,alt): " << latitudeDeviation << " m,  " << longitudeDeviation << " m,  " << altitudeDeviation << " m" << endl
@@ -406,15 +426,19 @@ std::string GPSFix::toString(){
 	ss << "   Altitude:           " << altitude << " m" << endl
 		<< "   Speed:              " << speed << " km/h" << endl
 		<< "   Travel Dir:         " << travelAngle << " deg  [" << travelAngleToCompassDirection(travelAngle) << "]" << endl
-		<< "   SNR:                avg: " << almanac.averageSNR() << " dB   [min: " << almanac.minSNR() << " dB,  max:" << almanac.maxSNR() << " dB]" << endl;
+		<< "   SNR:                avg: " << averageSNR() << " dB   [min: " << minSNR() << " dB,  max:" << maxSNR() << " dB]" << endl;
 
-	ss << " < Almanac (" << almanac.percentComplete() << "%) >" << endl;
-	if (almanac.satellites.empty()){
+	ss << " < Almanac (" << almanacPercentComplete() << "%) >" << endl;
+	if (almanacTable.empty()){
 		ss << " > No satellite info in almanac." << endl;
 	}
-	for (size_t i = 0; i < almanac.satellites.size(); i++){
-		ss << "   [" << setw(2) << setfill(' ') <<  (i + 1) << "]   " << almanac.satellites[i].toString() << endl;
+	for (auto& almanac : almanacTable) {
+		ss << "   [" << almanac.first << "]" << endl;
+		for (size_t i = 0; i < almanac.second.satellites.size(); i++) {
+			ss << "      [" << setw(2) << setfill(' ') <<  (i + 1) << "]   " << almanac.second.satellites[i].toString() << endl;
+		}
 	}
+
 
 	return ss.str();
 }
