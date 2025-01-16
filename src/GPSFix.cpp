@@ -111,7 +111,7 @@ std::string GPSTimestamp::monthName(uint32_t index){
 time_t GPSTimestamp::getTime() {
 	struct tm t = { 0 };
 	t.tm_year = year - 1900;	// This is year-1900, so 112 = 2012
-	t.tm_mon = month;			// month from 0:Jan
+	t.tm_mon = month - 1;		// month from 0:Jan
 	t.tm_mday = day;
 	t.tm_hour = hour;
 	t.tm_min = min;
@@ -189,16 +189,11 @@ GPSFix::~GPSFix() {
 // Returns the duration since the Host has received information
 seconds GPSFix::timeSinceLastUpdate(){
 	time_t now = time(NULL);
-	struct tm stamp = { 0 };
+	time_t then = timestamp.getTime();
+	return timeSince(now, then);
+}
 
-	stamp.tm_hour = timestamp.hour;
-	stamp.tm_min = timestamp.min;
-	stamp.tm_sec = (int)timestamp.sec;
-	stamp.tm_year = timestamp.year-1900;
-	stamp.tm_mon = timestamp.month-1;
-	stamp.tm_mday = timestamp.day;
-
-	time_t then = mktime(&stamp);
+seconds GPSFix::timeSince(time_t now, time_t then){
 	uint64_t secs = (uint64_t)difftime(now,then);
 	return seconds((uint64_t)secs);
 }
@@ -295,10 +290,11 @@ double GPSFix::averageSNR(){
 	for (const auto& almanac : almanacTable) {
 		for (const auto& satellite : almanac.second.satellites){
 			if (satellite.snr > 0){
-				avg += satellite.snr / relevant;
+				avg += satellite.snr;
 			}
 		}
 	}
+	avg /= relevant;
 
 	return avg;
 }
@@ -341,7 +337,7 @@ double GPSFix::maxSNR(){
 uint32_t GPSFix::visibleSatellites() {
 	uint32_t visibleSatelitesNum = 0;
 	for (const auto& almanac : almanacTable) {
-		visibleSatelitesNum+=almanac.second.visibleSatelites;
+		visibleSatelitesNum += almanac.second.visibleSatelites;
 	}
 	return visibleSatelitesNum;
 }
@@ -352,7 +348,7 @@ double GPSFix::almanacPercentComplete() {
 	}
 	double percentComplete = 0;
 	for (auto& almanac : almanacTable) {
-		percentComplete+=almanac.second.percentComplete();
+		percentComplete += almanac.second.percentComplete();
 	}	
 	return percentComplete/almanacTable.size();
 }
@@ -389,11 +385,11 @@ std::string fixQualityToString(uint8_t quality){
 	case 2:
 		return "DGPS";
 	case 3:
-		return "PPS fix";
+		return "PPS Fix";
 	case 4:
-		return "Real Time Kinetic";
+		return "RTK Fix";
 	case 5:
-		return "Real Time Kinetic (float)";
+		return "RTK Float";
 	case 6:
 		return "Estimate";
 	default:
@@ -417,7 +413,7 @@ std::string GPSFix::toString(){
 		<< "   Lat/Lon (N,E):      " << setprecision(6) << fixed << latitude << "' N, " << longitude << "' E" <<  endl;
 
 	ss.flags(oldflags);  //reset
-	ss << "   Diff (age, id):               " << diffAge << "s, " << diffStation << endl;
+	ss << "   Diff (age, id):     " << diffAge << " s, " << diffStation << endl;
 
 	ss << "   DOP (P,H,V):        " << dilution << ",   " << horizontalDilution << ",   " << verticalDilution << endl
 		<< "   Error(lat,lon,alt): " << latitudeDeviation << " m,  " << longitudeDeviation << " m,  " << altitudeDeviation << " m" << endl
@@ -433,7 +429,7 @@ std::string GPSFix::toString(){
 		ss << " > No satellite info in almanac." << endl;
 	}
 	for (auto& almanac : almanacTable) {
-		ss << "   [" << almanac.first << "]" << endl;
+		ss << "   [" << almanac.first << "] Age: " << timeSince(timestamp.getTime(),almanac.second.lastUpdate).count() << " s" << endl;
 		for (size_t i = 0; i < almanac.second.satellites.size(); i++) {
 			ss << "      [" << setw(2) << setfill(' ') <<  (i + 1) << "]   " << almanac.second.satellites[i].toString() << endl;
 		}

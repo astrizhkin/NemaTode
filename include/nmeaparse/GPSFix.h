@@ -77,8 +77,8 @@ namespace nmea {
 		//mapped by prn
 		std::vector<GPSSatellite> satellites;
 		uint32_t visibleSatelites;
+		time_t lastUpdate;
 		double percentComplete();
-
 	};
 
 
@@ -179,6 +179,7 @@ namespace nmea {
 		bool hasEstimate();
 		
 		std::chrono::seconds timeSinceLastUpdate();	// Returns seconds difference from last timestamp and right now.
+		std::chrono::seconds timeSince(time_t now, time_t then);	// Returns seconds difference from then to now
 
 		std::string toString();
 		operator std::string();

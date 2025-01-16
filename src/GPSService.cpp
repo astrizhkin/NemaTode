@@ -427,7 +427,6 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 			}
 		}
 
-		almanac.lastPage = currentPage;
 
 		int entriesInPage = (nmea.parameters.size() - 3) >> 2;	//first 3 are not satellite info
 		//- entries come in 4-ples, and truncate, so used shift
@@ -445,6 +444,8 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 			almanac.addSatellite(sat);
 		}
 
+		almanac.lastPage = currentPage;
+		almanac.lastUpdate = fix.timestamp.getTime();
 		almanac.processedPages++;
 
 		//cout << "ALMANAC FINISHED page " << this->fix.almanac.processedPages << " of " << this->fix.almanac.totalPages << endl;
