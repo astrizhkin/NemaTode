@@ -119,6 +119,11 @@ time_t GPSTimestamp::getTime() {
 	return mktime(&t);
 }
 
+int64_t GPSTimestamp::getTimeMilliseconds() {
+	int64_t seconds = (int64_t)getTime();
+	return seconds*1000 + (int64_t) ((rawTime - (long)rawTime) * 1000);
+}
+
 void GPSTimestamp::setTime(double raw_ts){
 	rawTime = raw_ts;
 

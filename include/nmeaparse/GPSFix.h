@@ -107,6 +107,8 @@ namespace nmea {
 
 		time_t getTime();
 
+		int64_t getTimeMilliseconds();
+
 		// Set directly from the NMEA time stamp
 		// hhmmss.sss
 		void setTime(double raw_ts);
