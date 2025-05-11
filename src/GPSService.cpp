@@ -125,7 +125,7 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 	Where:
 	GGA          Global Positioning System Fix Data
 	index:
-	[0] 123519       Fix taken at 12:35:19 UTC
+	[0] 123519.00      Epoch time (12:35:19 UTC)
 	[1-2] 4807.038,N   Latitude 48 deg 07.038' N
 	[3-4] 1131.000,E  Longitude 11 deg 31.000' E
 	[5] 1            Fix quality: 0 = invalid
@@ -158,7 +158,7 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 
 
 		// TIMESTAMP
-		this->fix.timestamp.setTime(parseDouble(nmea.parameters[0]));
+		this->fix.positionTimestamp.setTime(parseDouble(nmea.parameters[0]));
 
 		string sll;
 		string dir;
@@ -303,7 +303,7 @@ void GPSService::read_GxGST(const NMEASentence& nmea){
 
 	Where:
 	GST				Estimated error
-	[0] 171214.000	UTC time status of position (hours/minutes/seconds/ decimal seconds)
+	[0] 171214.00	Epoch UTC time status of position (hours/minutes/seconds/ decimal seconds)
 	[1] 3.3			RMS value of the standard deviation of the range inputs to the navigation process
 	[2] 1.5			semi-major axis deviation
 	[3] 1.3			semi-minor axis deviation
@@ -324,7 +324,8 @@ void GPSService::read_GxGST(const NMEASentence& nmea){
 			throw NMEAParseError("GPS data is missing parameters.");
 		}
 
-		this->fix.timestamp.setTime(parseDouble(nmea.parameters[0]));		// UTC TIME
+		//do not update timestamp since position is not updated
+		this->fix.deviationTimestamp.setTime(parseDouble(nmea.parameters[0]));		// UTC TIME
 		this->fix.rmsDeviation = parseDouble(nmea.parameters[1]);			// ROOT MEAN SQUARE
 		this->fix.semiMajorDeviation = parseDouble(nmea.parameters[2]);		// SEMI-MAJOR AXIS DEVIATION
 		this->fix.semiMinorDeviation = parseDouble(nmea.parameters[3]);		// SEMI-MINOR AXIS DEVIATION
@@ -445,7 +446,8 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 		}
 
 		almanac.lastPage = currentPage;
-		almanac.lastUpdate = fix.timestamp.getTime();
+		almanac.lastUpdate.setTime(fix.positionTimestamp.rawTime);
+		almanac.lastUpdate.setDate(fix.positionTimestamp.rawDate);
 		almanac.processedPages++;
 
 		//cout << "ALMANAC FINISHED page " << this->fix.almanac.processedPages << " of " << this->fix.almanac.totalPages << endl;
@@ -479,7 +481,7 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 
 	Where:
 	RMC          Recommended Minimum sentence C
-	[0] 123519       Fix taken at 12:35:19 UTC
+	[0] 123519.00    Epoch time (12:35:19 UTC)
 	[1] A            Status A=active or V=Void.
 	[2-3] 4807.038,N   Latitude 48 deg 07.038' N
 	[4-5] 01131.000,E  Longitude 11 deg 31.000' E
@@ -502,7 +504,9 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 		}
 
 		// TIMESTAMP
-		this->fix.timestamp.setTime(parseDouble(nmea.parameters[0]));
+		double epochTime = parseDouble(nmea.parameters[0]);
+		this->fix.positionTimestamp.setTime(epochTime);
+		this->fix.speedTimestamp.setTime(epochTime);
 
 		string sll;
 		string dir;
@@ -541,8 +545,10 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 
 		this->fix.speed = convertKnotsToKilometersPerHour(parseDouble(nmea.parameters[6]));		// received as knots, convert to km/h
 		this->fix.travelAngle = parseDouble(nmea.parameters[7]);
-		this->fix.timestamp.setDate((int32_t)parseInt(nmea.parameters[8]));
-
+		int32_t date = (int32_t)parseInt(nmea.parameters[8]);
+		this->fix.positionTimestamp.setDate(date);
+		this->fix.speedTimestamp.setDate(date);
+		this->fix.deviationTimestamp.setDate(date);
 
 		//calling handlers
 		if (lockupdate){

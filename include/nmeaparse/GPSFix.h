@@ -77,7 +77,7 @@ namespace nmea {
 		//mapped by prn
 		std::vector<GPSSatellite> satellites;
 		uint32_t visibleSatelites;
-		time_t lastUpdate;
+		GPSTimestamp lastUpdate;
 		double percentComplete();
 	};
 
@@ -138,7 +138,6 @@ namespace nmea {
 		virtual ~GPSFix();
 
 		std::unordered_map<std::string, nmea::GPSAlmanac> almanacTable;
-		GPSTimestamp timestamp;
 
 		char status;		// Status: A=active, V=void (not locked)
 		uint8_t type;		// Type: 1=none, 2=2d, 3=3d
@@ -155,6 +154,7 @@ namespace nmea {
 		double horizontalDilution;			// Horizontal dilution of precision, initialized to 100, best =1, worst = >20
 		double verticalDilution;			// Vertical is less accurate
 
+		GPSTimestamp deviationTimestamp;
 		double rmsDeviation;				// Root mean square value of the standard deviation of the range inputs to the navigation process.
 		double semiMajorDeviation;			// Standard deviation of semi-major axis of error ellipse, in meters 
 		double semiMinorDeviation;			// Standard deviation of semi-minor axis of error ellipse, in meters
@@ -163,9 +163,12 @@ namespace nmea {
 		double longitudeDeviation;			// Standard deviation of longitude error (m)
 		double altitudeDeviation;			// Standard deviation of altitude error (m)
 
+		GPSTimestamp positionTimestamp;
 		double altitude;		// meters
 		double latitude;		// degrees N
 		double longitude;		// degrees E
+		
+		GPSTimestamp speedTimestamp;
 		double speed;			// km/h
 		double travelAngle;		// degrees true north (0-360)
 		uint32_t trackingSatellites;
@@ -178,7 +181,7 @@ namespace nmea {
 		double verticalAccuracy();
 		bool hasEstimate();
 		
-		std::chrono::seconds timeSinceLastUpdate();	// Returns seconds difference from last timestamp and right now.
+		std::chrono::seconds timeSince(GPSTimestamp timestamp);	// Returns seconds difference from last timestamp and right now.
 		std::chrono::seconds timeSince(time_t now, time_t then);	// Returns seconds difference from then to now
 
 		std::string toString();

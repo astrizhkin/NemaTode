@@ -187,7 +187,7 @@ GPSFix::~GPSFix() {
 }
 
 // Returns the duration since the Host has received information
-seconds GPSFix::timeSinceLastUpdate(){
+seconds GPSFix::timeSince(GPSTimestamp timestamp){
 	time_t now = time(NULL);
 	time_t then = timestamp.getTime();
 	return timeSince(now, then);
@@ -405,8 +405,8 @@ std::string GPSFix::toString(){
 		<< " Status: \t\t" << ((haslock) ? "LOCK!" : "SEARCHING...") << endl
 		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << visibleSatellites() << " (visible)" << endl
 		<< " < Fix Details >" << endl
-		<< "   Age:                " << timeSinceLastUpdate().count() << " s" << endl
-		<< "   Timestamp:          " << timestamp.toString() << "   UTC   \n\t\t\t(raw: " << timestamp.rawTime << " time, " << timestamp.rawDate << " date)" << endl
+		<< "   Age:                " << timeSince(positionTimestamp).count() << " s" << endl
+		<< "   Timestamp:          " << positionTimestamp.toString() << "   UTC   \n\t\t\t(raw: " << positionTimestamp.rawTime << " time, " << positionTimestamp.rawDate << " date)" << endl
 		<< "   Raw Status:         " << status			<< "  (" << fixStatusToString(status) << ")" << endl
 		<< "   Type:               " << (int)type		<< "  (" << fixTypeToString(type) << ")" << endl
 		<< "   Quality:            " << (int)quality	<< "  (" << fixQualityToString(quality) << ")" << endl
@@ -429,7 +429,7 @@ std::string GPSFix::toString(){
 		ss << " > No satellite info in almanac." << endl;
 	}
 	for (auto& almanac : almanacTable) {
-		ss << "   [" << almanac.first << "] Age: " << timeSince(timestamp.getTime(),almanac.second.lastUpdate).count() << " s" << endl;
+		ss << "   [" << almanac.first << "] Age: " << timeSince(almanac.second.lastUpdate).count() << " s" << endl;
 		for (size_t i = 0; i < almanac.second.satellites.size(); i++) {
 			ss << "      [" << setw(2) << setfill(' ') <<  (i + 1) << "]   " << almanac.second.satellites[i].toString() << endl;
 		}
