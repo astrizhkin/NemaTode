@@ -28,7 +28,7 @@ int main(int argc, char** argv){
 	
 	cout << "Fix  Sats  Sig\t\tSpeed    Dir  Lat         , Lon           Accuracy" << endl;
 	// Handle any changes to the GPS Fix... This is called whenever it's updated.
-	gps.onUpdate += [&gps](){
+	gps.onUpdate += [&gps](NMEASentence::MessageID messageId){
 		cout << (gps.fix.locked() ? "[*] " : "[ ] ") << setw(2) << setfill(' ') << gps.fix.trackingSatellites << "/" << setw(2) << setfill(' ') << gps.fix.visibleSatellites() << " ";
 		cout << fixed << setprecision(2) << setw(5) << setfill(' ') << gps.fix.averageSNR() << " dB   ";
 		cout << fixed << setprecision(2) << setw(6) << setfill(' ') << gps.fix.speed << " km/h [" << GPSFix::travelAngleToCompassDirection(gps.fix.travelAngle, true) << "]  ";

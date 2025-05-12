@@ -38,8 +38,8 @@ int main(int argc, char** argv){
 	};
 
 	// Handle any changes to the GPS Fix... This is called after onSentence
-	gps.onUpdate += [&gps](){
-		cout << "\t\t\tPosition: " << gps.fix.latitude << "'N, " << gps.fix.longitude << "'E" << endl << endl;
+	gps.onUpdate += [&gps](NMEASentence::MessageID messageId){
+		cout << "\t\t\t" << messageId << " Position: " << gps.fix.latitude << "'N, " << gps.fix.longitude << "'E" << endl << endl;
 	};
 
 	// (optional) - Handle events when the parser receives each sentence
