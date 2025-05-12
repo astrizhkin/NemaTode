@@ -207,7 +207,7 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 		if (lockupdate){
 			this->onLockStateChanged(this->fix.haslock);
 		}
-		this->onUpdate();
+		this->onUpdate(NMEASentence::MessageID::GGA);
 	}
 	catch (NumberConversionError& ex)
 	{
@@ -281,7 +281,7 @@ void GPSService::read_GxGSA(const NMEASentence& nmea){
 		if (lockupdate){
 			this->onLockStateChanged(this->fix.haslock);
 		}
-		this->onUpdate();
+		this->onUpdate(NMEASentence::MessageID::GSA);
 	}
 	catch (NumberConversionError& ex)
 	{
@@ -335,7 +335,7 @@ void GPSService::read_GxGST(const NMEASentence& nmea){
 		this->fix.altitudeDeviation = parseDouble(nmea.parameters[7]);		// ALTITUDE DEVIATION
 
 		//calling handlers
-		this->onUpdate();
+		this->onUpdate(NMEASentence::MessageID::GST);
 	}
 	catch (NumberConversionError& ex)
 	{
@@ -458,7 +458,7 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
   				msg << "Expected almanac " << talkerSignalId << " visible satelates received " << almanac.satellites.size() << " do not match declared " << almanac.visibleSatelites;
 				throw NMEAParseError(msg.str());
 			}
-			this->onUpdate();
+			this->onUpdate(NMEASentence::MessageID::GSV);
 		}
 	}
 	catch (NumberConversionError& ex)
@@ -554,7 +554,7 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 		if (lockupdate){
 			this->onLockStateChanged(this->fix.haslock);
 		}
-		this->onUpdate();
+		this->onUpdate(NMEASentence::MessageID::RMC);
 	}
 	catch (NumberConversionError& ex)
 	{
@@ -596,7 +596,7 @@ void GPSService::read_GxVTG(const NMEASentence& nmea){
 		this->fix.speed = parseDouble(nmea.parameters[6]);		//km/h
 
 
-		this->onUpdate();
+		this->onUpdate(NMEASentence::MessageID::VTG);
 	}
 	catch (NumberConversionError& ex)
 	{

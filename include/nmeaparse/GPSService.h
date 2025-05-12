@@ -39,7 +39,7 @@ public:
 	virtual ~GPSService();
 
 	Event<void(bool)> onLockStateChanged;		// user assignable handler, called whenever lock changes
-	Event<void()> onUpdate;						// user assignable handler, called whenever fix changes
+	Event<void(NMEASentence::MessageID)> onUpdate;						// user assignable handler, called whenever fix changes
 
 	void attachToParser(NMEAParser& parser);			// will attach to this parser's nmea sentence events
 };

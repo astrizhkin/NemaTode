@@ -74,7 +74,7 @@ namespace nmea {
 	
 			time_t getTime();
 	
-			int64_t getTimeMilliseconds();
+			uint64_t getTimeMilliseconds();
 	
 			// Set directly from the NMEA time stamp
 			// hhmmss.sss
@@ -88,7 +88,7 @@ namespace nmea {
 		};
 
 
-		
+
 	// =========================== GPS ALMANAC =====================================
 
 

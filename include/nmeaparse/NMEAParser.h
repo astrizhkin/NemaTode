@@ -45,17 +45,21 @@ public:
 	bool checksumIsCalculated;
 	uint8_t parsedChecksum;
 	uint8_t calculatedChecksum;
-
+	
 	enum MessageID {		// These ID's are according to NMEA standard.
 		Unknown = -1,
-		GGA = 0,
-		GLL = 1,
-		GSA = 2,
-		GSV = 3,
-		RMC = 4,
-		VTG = 5,		// notice missing 6,7
-		ZDA = 8
+		GGA = 0,        // GPS Fix Data and Undulation
+		GLL = 1,        // Latitude and Longitude of Present Vessel Position
+		GSA = 2,        // GPS DOP and Active Satellites
+		GSV = 3,        // GPS Satellites in View
+		RMC = 4,        // GPS Specific Information
+		VTG = 5,		// The Track Made Good and Speed Relative to the Ground, 
+		MSS = 6,
+		//notice missing 7
+		ZDA = 8,        // UTC Time and Date
+		GST = 9,        // Only Dop Values are Valid Currently, not defined by standard!!!
 	};
+
 public:
 	NMEASentence();
 	virtual ~NMEASentence();
