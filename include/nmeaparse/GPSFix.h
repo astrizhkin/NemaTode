@@ -126,13 +126,14 @@ namespace nmea {
 		friend GPSService;
 
 	private:
-		GPSTimestamp lastKnownEpoch;
 		bool haslock;
 		bool setlock(bool b);		//returns true if lock status **changed***, false otherwise.
 	public:
 
 		GPSFix();
 		virtual ~GPSFix();
+
+		GPSTimestamp last_epoch;
 
 		std::unordered_map<std::string, nmea::GPSAlmanac> almanacTable;
 

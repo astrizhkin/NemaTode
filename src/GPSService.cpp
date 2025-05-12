@@ -160,7 +160,7 @@ void GPSService::read_GxGGA(const NMEASentence& nmea){
 		// TIMESTAMP
 		double epoch = parseDouble(nmea.parameters[0]);
 		this->fix.GGA_epoch.setTime(epoch);
-		this->fix.lastKnownEpoch.setTime(epoch);
+		this->fix.last_epoch.setTime(epoch);
 
 		string sll;
 		string dir;
@@ -267,7 +267,7 @@ void GPSService::read_GxGSA(const NMEASentence& nmea){
 		else {}
 
 		// TIMESTAMP is unknown, we will use last known epoch time 
-		this->fix.GSA_epoch.setTime(this->fix.lastKnownEpoch.rawTime);
+		this->fix.GSA_epoch.setTime(this->fix.last_epoch.rawTime);
 
 		// DILUTION OF PRECISION  -- PDOP
 		double dop = parseDouble(nmea.parameters[14]);
@@ -331,7 +331,7 @@ void GPSService::read_GxGST(const NMEASentence& nmea){
 		//do not update timestamp since position is not updated
 		double epoch = parseDouble(nmea.parameters[0]);
 		this->fix.GSA_epoch.setTime(epoch);		// UTC TIME
-		this->fix.lastKnownEpoch.setTime(epoch);
+		this->fix.last_epoch.setTime(epoch);
 		this->fix.rmsDeviation = parseDouble(nmea.parameters[1]);			// ROOT MEAN SQUARE
 		this->fix.semiMajorDeviation = parseDouble(nmea.parameters[2]);		// SEMI-MAJOR AXIS DEVIATION
 		this->fix.semiMinorDeviation = parseDouble(nmea.parameters[3]);		// SEMI-MINOR AXIS DEVIATION
@@ -452,8 +452,8 @@ void GPSService::read_GxGSV(const NMEASentence& nmea){
 		}
 
 		almanac.lastPage = currentPage;
-		almanac.lastUpdate.setTime(fix.lastKnownEpoch.rawTime);
-		almanac.lastUpdate.setDate(fix.lastKnownEpoch.rawDate);
+		almanac.lastUpdate.setTime(fix.last_epoch.rawTime);
+		almanac.lastUpdate.setDate(fix.last_epoch.rawDate);
 		almanac.processedPages++;
 
 		//cout << "ALMANAC FINISHED page " << this->fix.almanac.processedPages << " of " << this->fix.almanac.totalPages << endl;
@@ -512,7 +512,7 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 		// TIMESTAMP
 		double epoch = parseDouble(nmea.parameters[0]);
 		this->fix.RMC_epoch.setTime(epoch);
-		this->fix.lastKnownEpoch.setTime(epoch);
+		this->fix.last_epoch.setTime(epoch);
 
 		string sll;
 		string dir;
@@ -556,7 +556,7 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 		this->fix.GSA_epoch.setDate(date);
 		this->fix.GST_epoch.setDate(date);
 		this->fix.RMC_epoch.setDate(date);
-		this->fix.lastKnownEpoch.setDate(date);
+		this->fix.last_epoch.setDate(date);
 
 		//calling handlers
 		if (lockupdate){

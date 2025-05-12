@@ -410,8 +410,8 @@ std::string GPSFix::toString(){
 		<< " Status: \t\t" << ((haslock) ? "LOCK!" : "SEARCHING...") << endl
 		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << visibleSatellites() << " (visible)" << endl
 		<< " < Fix Details >" << endl
-		<< "   Age:                " << timeSince(lastKnownEpoch).count() << " s" << endl
-		<< "   Timestamp:          " << lastKnownEpoch.toString() << "   UTC   \n\t\t\t(raw: " << lastKnownEpoch.rawTime << " time, " << lastKnownEpoch.rawDate << " date)" << endl
+		<< "   Age:                " << timeSince(last_epoch).count() << " s" << endl
+		<< "   Timestamp:          " << last_epoch.toString() << "   UTC   \n\t\t\t(raw: " << last_epoch.rawTime << " time, " << last_epoch.rawDate << " date)" << endl
 		<< "   Raw Status:         " << status			<< "  (" << fixStatusToString(status) << ")" << endl
 		<< "   Type:               " << (int)type		<< "  (" << fixTypeToString(type) << ")" << endl
 		<< "   Quality:            " << (int)quality	<< "  (" << fixQualityToString(quality) << ")" << endl
