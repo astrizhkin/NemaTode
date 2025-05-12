@@ -126,7 +126,7 @@ namespace nmea {
 		friend GPSService;
 
 	private:
-
+		GPSTimestamp lastKnownEpoch;
 		bool haslock;
 		bool setlock(bool b);		//returns true if lock status **changed***, false otherwise.
 	public:
@@ -147,11 +147,13 @@ namespace nmea {
 							//    5 = Float RTK
 							//    6 = estimated (dead reckoning) (2.3 feature)
 
+		GPSTimestamp GSA_epoch; //type->lock, dilution, horizontalDilution, verticalDilution
+		
 		double dilution;					// Combination of Vertical & Horizontal
 		double horizontalDilution;			// Horizontal dilution of precision, initialized to 100, best =1, worst = >20
 		double verticalDilution;			// Vertical is less accurate
 
-		GPSTimestamp deviationTimestamp;
+		GPSTimestamp GST_epoch; //rmsDeviation, semiMajorDeviation, semiMinorDeviation, semiMajorOrient, latitudeDeviation, longitudeDeviation, altitudeDeviation
 		double rmsDeviation;				// Root mean square value of the standard deviation of the range inputs to the navigation process.
 		double semiMajorDeviation;			// Standard deviation of semi-major axis of error ellipse, in meters 
 		double semiMinorDeviation;			// Standard deviation of semi-minor axis of error ellipse, in meters
@@ -160,12 +162,12 @@ namespace nmea {
 		double longitudeDeviation;			// Standard deviation of longitude error (m)
 		double altitudeDeviation;			// Standard deviation of altitude error (m)
 
-		GPSTimestamp positionTimestamp;
+		GPSTimestamp GGA_epoch; //latitude, longitude, altitude, quality->lock, diffAge, diffStation, trackingSatellites
 		double altitude;		// meters
 		double latitude;		// degrees N
 		double longitude;		// degrees E
 		
-		GPSTimestamp speedTimestamp;
+		GPSTimestamp RMC_epoch; //longitude, longitude, status->lock, speed, travelAngle
 		double speed;			// km/h
 		double travelAngle;		// degrees true north (0-360)
 		uint32_t trackingSatellites;
