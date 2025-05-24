@@ -330,7 +330,7 @@ void GPSService::read_GxGST(const NMEASentence& nmea){
 
 		//do not update timestamp since position is not updated
 		double epoch = parseDouble(nmea.parameters[0]);
-		this->fix.GSA_epoch.setTime(epoch);		// UTC TIME
+		this->fix.GST_epoch.setTime(epoch);		// UTC TIME
 		this->fix.last_epoch.setTime(epoch);
 		this->fix.rmsDeviation = parseDouble(nmea.parameters[1]);			// ROOT MEAN SQUARE
 		this->fix.semiMajorDeviation = parseDouble(nmea.parameters[2]);		// SEMI-MAJOR AXIS DEVIATION
