@@ -292,7 +292,7 @@ void NMEAParser::readSentence(std::string cmd){
 	else
 	{
 		if(nmea.name == "GNTXT") {
-			onInfo(nmea, string("GNTXT received: (\"") + nmea.text + "\")");
+			onWarning(nmea, string("GNTXT received: (\"") + nmea.text + "\")");
 		}else{
 			onWarning(nmea, string("Null event handler for type (name: \"") + nmea.name + "\")");
 		}
