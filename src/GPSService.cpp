@@ -580,22 +580,22 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 }
 
 void GPSService::read_PUBX03(const NMEASentence& nmea){
-	/*  -- EXAMPLE --
-	$PUBX,03,GT11,23,-,,,45,010,29,-,,,46,013,07,U,067,31,42,025,10,U,195,33,46,026,18,U,326,08,39,026,17,-,,,32,015,26,U,306,66,48,025,27,U,073,10,36,026,28,U,089,61,46,024,15,-,,,39,014*0D
-
-	Where:
+	/*  -- FORMAT --
+	$PUBX,03,count,{sv,s,az,el,cno,lck},...,cs
+            -- EXAMPLE --
+	$PUBX,03,32,5,U,240,32,34,064,7,U,090,33,43,064,8,U,048,25,40,064,14,U,169,53,35,019,15,U,299,33,41,064,18,-,314,10,13,000,20,U,280,55,38,064,21,e,212,20,24,000,22,e,182,40,37,064,23,-,341,10,13,000,27,e,018,11,,000,30,U,111,69,48,064,121,-,218,15,,000,127,-,151,18,,000,128,-,123,08,,000,132,-,113,04,,000,136,-,207,18,,000,214,U,295,29,34,064,216,-,300,05,,000,220,e,275,07,07,000,221,e,300,15,14,000,224,e,099,24,,000,229,U,222,76,36,064,231,e,170,44,34,064,233,-,201,02,,000,237,U,081,53,42,064,238,e,281,52,,000,239,e,138,38,28,064,240,U,041,15,37,064,244,-,035,01,,000,246,e,349,17,26,000,160,-,127,07,,000*53
+	
+        Where:
 	PUBX         Proprietary message
-	[0] PUBX     Message ID
-	[1] 03       Message type (SVSTATUS)
-	[2] GT       Type indicator (G=GNSS, T=total)
-	[3] 11       Number of satellites tracked
-	Then 11 groups of 6 fields:
-		[sv] 23    Satellite ID (UBX svId mapping)
-		[s]  -      Status: - = not used, U = used in fix, e = ephemeris available
-		[az]        Azimuth (0-359 deg)
-		[el]        Elevation (0-90 deg)
-		[cno] 45    C/N0 signal strength (dBHz)
-		[lck] 010   Carrier lock time (0-64s)
+	[0] 03       Message type (SVSTATUS)
+	[1] count    Number of satellites tracked
+	Then N groups of 6 fields:
+		[sv] 5     Satellite ID (UBX svId mapping)
+		[s]  U      Status: - = not used, U = used in fix, e = ephemeris available
+		[az] 240   Azimuth (0-359 deg)
+		[el] 32    Elevation (0-90 deg)
+		[cno] 34   C/N0 signal strength (dBHz)
+		[lck] 010  Carrier lock time (0-64 s; 0=code lock only, 64=64s+)
 	*/
 
 	try
@@ -604,23 +604,23 @@ void GPSService::read_PUBX03(const NMEASentence& nmea){
 			throw NMEAParseError("Checksum is invalid!");
 		}
 
-		if (nmea.parameters.size() < 5){
-			throw NMEAParseError("PUBX03 data is missing parameters");
+		if (nmea.parameters.size() < 3){
+			throw NMEAParseError("PUBX03 data is missing parameters.");
 		}
 
 		// Type must be 03
-		if (nmea.parameters[1] != "03"){
+		if (nmea.parameters[0] != "03"){
 			throw NMEAParseError("Expected PUBX type 03");
 		}
 
 		// Number of satellites
-		uint32_t n = (uint32_t)parseInt(nmea.parameters[3]);
+		uint32_t n = (uint32_t)parseInt(nmea.parameters[1]);
 
 		// Clear and repopulate
 		this->fix.pubx03Almanac.clear();
 
-		// Parse satellite entries (6 fields each, starting at index 4)
-		int baseIdx = 4;
+		// Parse satellite entries (6 fields each, starting at index 2)
+		int baseIdx = 2;
 		for (uint32_t i = 0; i < n; i++){
 			PUBX03Satellite sat;
 
@@ -645,7 +645,7 @@ void GPSService::read_PUBX03(const NMEASentence& nmea){
 			if (baseIdx + 4 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 4 + i * 6].empty()){
 				sat.cno = parseDouble(nmea.parameters[baseIdx + 4 + i * 6]);
 			}
-			// lck
+			// lck (carrier lock time in seconds)
 			if (baseIdx + 5 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 5 + i * 6].empty()){
 				sat.carrierLockTime = (uint16_t)parseInt(nmea.parameters[baseIdx + 5 + i * 6]);
 			}
