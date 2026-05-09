@@ -76,6 +76,9 @@ void GPSService::attachToParser(NMEAParser& _parser){
 	_parser.setSentenceHandler("PSRF150", [this](const NMEASentence& nmea){
 		this->read_PSRF150(nmea);
 	});
+	_parser.setSentenceHandler("PUBX", [this](const NMEASentence& nmea){
+		this->read_PUBX03(nmea);
+	});
 	for (const auto& talker : talkerIds){
 		std::string sentence{talker};
 
@@ -572,6 +575,96 @@ void GPSService::read_GxRMC(const NMEASentence& nmea){
 	catch (NMEAParseError& ex)
 	{
 		NMEAParseError pe("GPS Data Bad Format [$GPRMC] :: " + ex.message, nmea);
+		throw pe;
+	}
+}
+
+void GPSService::read_PUBX03(const NMEASentence& nmea){
+	/*  -- EXAMPLE --
+	$PUBX,03,GT11,23,-,,,45,010,29,-,,,46,013,07,U,067,31,42,025,10,U,195,33,46,026,18,U,326,08,39,026,17,-,,,32,015,26,U,306,66,48,025,27,U,073,10,36,026,28,U,089,61,46,024,15,-,,,39,014*0D
+
+	Where:
+	PUBX         Proprietary message
+	[0] PUBX     Message ID
+	[1] 03       Message type (SVSTATUS)
+	[2] GT       Type indicator (G=GNSS, T=total)
+	[3] 11       Number of satellites tracked
+	Then 11 groups of 6 fields:
+		[sv] 23    Satellite ID (UBX svId mapping)
+		[s]  -      Status: - = not used, U = used in fix, e = ephemeris available
+		[az]        Azimuth (0-359 deg)
+		[el]        Elevation (0-90 deg)
+		[cno] 45    C/N0 signal strength (dBHz)
+		[lck] 010   Carrier lock time (0-64s)
+	*/
+
+	try
+	{
+		if (!nmea.checksumOK()){
+			throw NMEAParseError("Checksum is invalid!");
+		}
+
+		if (nmea.parameters.size() < 5){
+			throw NMEAParseError("PUBX03 data is missing parameters");
+		}
+
+		// Type must be 03
+		if (nmea.parameters[1] != "03"){
+			throw NMEAParseError("Expected PUBX type 03");
+		}
+
+		// Number of satellites
+		uint32_t n = (uint32_t)parseInt(nmea.parameters[3]);
+
+		// Clear and repopulate
+		this->fix.pubx03Almanac.clear();
+
+		// Parse satellite entries (6 fields each, starting at index 4)
+		int baseIdx = 4;
+		for (uint32_t i = 0; i < n; i++){
+			PUBX03Satellite sat;
+
+			// sv
+			if (baseIdx + i * 6 < (int)nmea.parameters.size()){
+				sat.svid = (uint32_t)parseInt(nmea.parameters[baseIdx + i * 6]);
+			}
+			// s (status)
+			if (baseIdx + 1 + i * 6 < (int)nmea.parameters.size()){
+				char statusChar = nmea.parameters[baseIdx + 1 + i * 6][0];
+				sat.usedInFix = (statusChar == 'U');
+			}
+			// az
+			if (baseIdx + 2 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 2 + i * 6].empty()){
+				sat.azimuth = parseDouble(nmea.parameters[baseIdx + 2 + i * 6]);
+			}
+			// el
+			if (baseIdx + 3 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 3 + i * 6].empty()){
+				sat.elevation = parseDouble(nmea.parameters[baseIdx + 3 + i * 6]);
+			}
+			// cno
+			if (baseIdx + 4 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 4 + i * 6].empty()){
+				sat.cno = parseDouble(nmea.parameters[baseIdx + 4 + i * 6]);
+			}
+			// lck
+			if (baseIdx + 5 + i * 6 < (int)nmea.parameters.size() && !nmea.parameters[baseIdx + 5 + i * 6].empty()){
+				sat.carrierLockTime = (uint16_t)parseInt(nmea.parameters[baseIdx + 5 + i * 6]);
+			}
+
+			this->fix.pubx03Almanac.addSatellite(sat);
+		}
+
+		this->fix.pubx03Almanac.lastUpdate.setTime(this->fix.last_epoch.rawTime);
+		this->fix.pubx03Almanac.lastUpdate.setDate(this->fix.last_epoch.rawDate);
+		this->onUpdate(NMEASentence::MessageID::GSV);
+	}
+	catch (NumberConversionError& ex)
+	{
+		NMEAParseError pe("GPS Number Bad Format [$PUBX03] :: " + ex.message, nmea);
+		throw pe;
+	}
+	catch (NMEAParseError& ex)
+	{
+		NMEAParseError pe("GPS Data Bad Format [$PUBX03] :: " + ex.message, nmea);
 		throw pe;
 	}
 }

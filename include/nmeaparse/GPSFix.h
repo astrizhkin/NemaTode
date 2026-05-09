@@ -23,6 +23,8 @@ namespace nmea {
 
 	class GPSSatellite;
 	class GPSAlmanac;
+	class PUBX03Satellite;
+	class PUBX03Almanac;
 	class GPSFix;
 	class GPSService;
 
@@ -49,6 +51,33 @@ namespace nmea {
 
 
 
+	// =========================== PUBX03 SATELLITE (SVSTATUS) ========================
+
+	class PUBX03Satellite {
+	public:
+		PUBX03Satellite() :
+			svid(0),
+			usedInFix(false),
+			azimuth(0),
+			elevation(0),
+			cno(0),
+			carrierLockTime(0)
+		{};
+
+		// Satellite ID (UBX svId mapping, encodes constellation + PRN)
+		uint32_t svid;
+
+		// Status: 0=not used, 1=used in fix, 2=ephemeris available but not used
+		bool usedInFix;
+
+		double azimuth;		// 0-359 deg
+		double elevation;	// 0-90 deg
+		double cno;			// C/N0 signal strength (dBHz, 0-99)
+		uint16_t carrierLockTime; // 0=code lock only, 64=lock for 64s or more
+
+		std::string toString();
+		operator std::string();
+	};
 
 
 	// =========================== GPS TIMESTAMP =====================================
@@ -59,31 +88,31 @@ namespace nmea {
 			std::string monthName(uint32_t index);
 		public:
 			GPSTimestamp();
-	
+
 			int32_t hour;
 			int32_t min;
 			double sec;
-	
+
 			int32_t month;
 			int32_t day;
 			int32_t year;
-	
+
 			// Values collected directly from the GPS
 			double rawTime;
 			int32_t rawDate;
-	
+
 			time_t getTime();
-	
+
 			uint64_t getTimeMilliseconds();
-	
+
 			// Set directly from the NMEA time stamp
 			// hhmmss.sss
 			void setTime(double raw_ts);
-	
+
 			// Set directly from the NMEA date stamp
 			// ddmmyy
 			void setDate(int32_t raw_date);
-	
+
 			std::string toString();
 		};
 
@@ -119,6 +148,20 @@ namespace nmea {
 	};
 
 
+	// =========================== PUBX03 ALMANAC (SVSTATUS) =========================
+
+	class PUBX03Almanac {
+		friend GPSService;
+	private:
+		void clear();
+		void addSatellite(PUBX03Satellite sat);
+	public:
+		PUBX03Almanac() {}
+
+		std::vector<PUBX03Satellite> satellites;
+		GPSTimestamp lastUpdate;
+	};
+
 
 	// =========================== GPS FIX =====================================
 
@@ -136,10 +179,11 @@ namespace nmea {
 		GPSTimestamp last_epoch;
 
 		std::unordered_map<std::string, nmea::GPSAlmanac> almanacTable;
+		PUBX03Almanac pubx03Almanac;
 
 		char status;		// Status: A=active, V=void (not locked)
 		uint8_t type;		// Type: 1=none, 2=2d, 3=3d
-		uint8_t quality;	// Quality: 
+		uint8_t quality;	// Quality:
 							//    0 = invalid
 							//    1 = GPS fix (SPS)
 							//    2 = DGPS fix
@@ -149,14 +193,14 @@ namespace nmea {
 							//    6 = estimated (dead reckoning) (2.3 feature)
 
 		GPSTimestamp GSA_epoch; //type->lock, dilution, horizontalDilution, verticalDilution
-		
+
 		double dilution;					// Combination of Vertical & Horizontal
 		double horizontalDilution;			// Horizontal dilution of precision, initialized to 100, best =1, worst = >20
 		double verticalDilution;			// Vertical is less accurate
 
 		GPSTimestamp GST_epoch; //rmsDeviation, semiMajorDeviation, semiMinorDeviation, semiMajorOrient, latitudeDeviation, longitudeDeviation, altitudeDeviation
 		double rmsDeviation;				// Root mean square value of the standard deviation of the range inputs to the navigation process.
-		double semiMajorDeviation;			// Standard deviation of semi-major axis of error ellipse, in meters 
+		double semiMajorDeviation;			// Standard deviation of semi-major axis of error ellipse, in meters
 		double semiMinorDeviation;			// Standard deviation of semi-minor axis of error ellipse, in meters
 		double semiMajorOrient;				// Orientation of semi-major axis of error ellipse (degrees from true north)
 		double latitudeDeviation;			// Standard deviation of latitude error (m)
@@ -167,7 +211,7 @@ namespace nmea {
 		double altitude;		// meters
 		double latitude;		// degrees N
 		double longitude;		// degrees E
-		
+
 		GPSTimestamp RMC_epoch; //longitude, longitude, status->lock, speed, travelAngle
 		double speed;			// km/h
 		double travelAngle;		// degrees true north (0-360)
@@ -180,7 +224,7 @@ namespace nmea {
 		double horizontalAccuracy();
 		double verticalAccuracy();
 		bool hasEstimate();
-		
+
 		std::chrono::seconds timeSince(GPSTimestamp timestamp);	// Returns seconds difference from last timestamp and right now.
 		std::chrono::seconds timeSince(time_t now, time_t then);	// Returns seconds difference from then to now
 
@@ -194,6 +238,14 @@ namespace nmea {
 		double minSNR();
 		double maxSNR();
 		double almanacPercentComplete();
+
+		// PUBX03 (SVSTATUS) queries
+		uint32_t countTracked() const;
+		uint32_t countUsedInFix() const;
+		uint32_t countUsedBySvid(uint32_t svid) const;
+		uint32_t countUsedByConstellation(uint8_t gnssId) const;
+		double averageSNRUsed() const;
+		double averageSNRAll() const;
 	};
 
 }

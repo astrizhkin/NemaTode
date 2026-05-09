@@ -65,6 +65,36 @@ double GPSAlmanac::percentComplete(){
 }
 
 // ===========================================================
+// ===================== PUBX03 SATELLITE ====================
+// ===========================================================
+
+string PUBX03Satellite::toString(){
+	stringstream ss;
+	ss << "[svid: " << setw(3) << setfill(' ') << svid << " "
+		<< "  C/N0: " << setw(3) << setfill(' ') << (int)cno << " dBHz  "
+		<< "  Used: " << (usedInFix ? "YES" : "no ")
+		<< "  Az: " << setw(3) << setfill(' ') << (int)azimuth << " deg "
+		<< "  El: " << setw(3) << setfill(' ') << (int)elevation << " deg  "
+		<< "  Lock: " << carrierLockTime << " s"
+		<< "]";
+	return ss.str();
+}
+PUBX03Satellite::operator std::string(){
+	return toString();
+}
+
+// ===========================================================
+// ====================== PUBX03 ALMANAC =====================
+// ===========================================================
+
+void PUBX03Almanac::clear(){
+	satellites.clear();
+}
+void PUBX03Almanac::addSatellite(PUBX03Satellite sat){
+	satellites.push_back(sat);
+}
+
+// ===========================================================
 // ======================== GPS TIMESTAMP ====================
 // ===========================================================
 
@@ -356,6 +386,68 @@ double GPSFix::almanacPercentComplete() {
 		percentComplete += almanac.second.percentComplete();
 	}	
 	return percentComplete/almanacTable.size();
+}
+
+// ===========================================================
+// ===================== PUBX03 QUERY METHODS =================
+// ===========================================================
+
+uint32_t GPSFix::countTracked() const {
+	return (uint32_t)pubx03Almanac.satellites.size();
+}
+
+uint32_t GPSFix::countUsedInFix() const {
+	uint32_t count = 0;
+	for (const auto& sat : pubx03Almanac.satellites) {
+		if (sat.usedInFix) count++;
+	}
+	return count;
+}
+
+uint32_t GPSFix::countUsedBySvid(uint32_t svid) const {
+	for (const auto& sat : pubx03Almanac.satellites) {
+		if (sat.svid == svid && sat.usedInFix) return 1;
+	}
+	return 0;
+}
+
+uint32_t GPSFix::countUsedByConstellation(uint8_t gnssId) const {
+	uint32_t count = 0;
+	for (const auto& sat : pubx03Almanac.satellites) {
+		if (!sat.usedInFix) continue;
+		if (gnssId == 0 && sat.svid >= 1 && sat.svid <= 32) count++;           // GPS
+		else if (gnssId == 1 && sat.svid >= 120 && sat.svid <= 158) count++;    // SBAS
+		else if (gnssId == 2 && sat.svid >= 211 && sat.svid <= 246) count++;    // Galileo
+		else if (gnssId == 3 && (sat.svid >= 33 && sat.svid <= 90 || sat.svid >= 159 && sat.svid <= 163)) count++; // BeiDou
+		else if (gnssId == 5 && sat.svid >= 193 && sat.svid <= 202) count++;    // QZSS
+		else if (gnssId == 6 && sat.svid >= 65 && sat.svid <= 95) count++;      // GLONASS
+		else if (gnssId == 7 && sat.svid >= 247 && sat.svid <= 253) count++;    // NavIC
+	}
+	return count;
+}
+
+double GPSFix::averageSNRUsed() const {
+	double sum = 0;
+	int count = 0;
+	for (const auto& sat : pubx03Almanac.satellites) {
+		if (sat.usedInFix && sat.cno > 0) {
+			sum += sat.cno;
+			count++;
+		}
+	}
+	return count > 0 ? sum / count : 0;
+}
+
+double GPSFix::averageSNRAll() const {
+	double sum = 0;
+	int count = 0;
+	for (const auto& sat : pubx03Almanac.satellites) {
+		if (sat.cno > 0) {
+			sum += sat.cno;
+			count++;
+		}
+	}
+	return count > 0 ? sum / count : 0;
 }
 
 
