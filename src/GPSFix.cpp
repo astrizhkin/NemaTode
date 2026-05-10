@@ -310,7 +310,7 @@ std::string GPSFix::travelAngleToCompassDirection(double deg, bool abbrev){
 	
 };
 
-double GPSFix::averageSNR(){
+double GPSFix::gsvAverageSNR(){
 
 	double avg = 0;
 	double relevant = 0;
@@ -333,7 +333,7 @@ double GPSFix::averageSNR(){
 
 	return avg;
 }
-double GPSFix::minSNR(){
+double GPSFix::gsvMinSNR(){
 	double min = 9999999;
 	if (almanacTable.empty()){
 		return 0;
@@ -355,7 +355,7 @@ double GPSFix::minSNR(){
 	return min;
 }
 
-double GPSFix::maxSNR(){
+double GPSFix::gsvMaxSNR(){
 	double max = 0;
 	for (const auto& almanac : almanacTable) {
 		for (const auto& satellite : almanac.second.satellites){
@@ -369,7 +369,7 @@ double GPSFix::maxSNR(){
 	return max;
 }
 
-uint32_t GPSFix::visibleSatellites() {
+uint32_t GPSFix::gsvVisibleSatellites() {
 	uint32_t visibleSatelitesNum = 0;
 	for (const auto& almanac : almanacTable) {
 		visibleSatelitesNum += almanac.second.visibleSatelites;
@@ -377,7 +377,7 @@ uint32_t GPSFix::visibleSatellites() {
 	return visibleSatelitesNum;
 }
 
-double GPSFix::almanacPercentComplete() {
+double GPSFix::gsvAlmanacPercentComplete() {
 	if(almanacTable.empty()){
 		return 0;
 	}
@@ -392,11 +392,11 @@ double GPSFix::almanacPercentComplete() {
 // ===================== PUBX03 QUERY METHODS =================
 // ===========================================================
 
-uint32_t GPSFix::countTracked() const {
+uint32_t GPSFix::pubxCountTracked() const {
 	return (uint32_t)pubx03Almanac.satellites.size();
 }
 
-uint32_t GPSFix::countUsedInFix() const {
+uint32_t GPSFix::pubxCountUsedInFix() const {
 	uint32_t count = 0;
 	for (const auto& sat : pubx03Almanac.satellites) {
 		if (sat.usedInFix) count++;
@@ -404,14 +404,14 @@ uint32_t GPSFix::countUsedInFix() const {
 	return count;
 }
 
-uint32_t GPSFix::countUsedBySvid(uint32_t svid) const {
+uint32_t GPSFix::pubxCountUsedBySvid(uint32_t svid) const {
 	for (const auto& sat : pubx03Almanac.satellites) {
 		if (sat.svid == svid && sat.usedInFix) return 1;
 	}
 	return 0;
 }
 
-uint32_t GPSFix::countUsedByConstellation(uint8_t gnssId) const {
+uint32_t GPSFix::pubxCountUsedByConstellation(uint8_t gnssId) const {
 	uint32_t count = 0;
 	for (const auto& sat : pubx03Almanac.satellites) {
 		if (!sat.usedInFix) continue;
@@ -426,7 +426,7 @@ uint32_t GPSFix::countUsedByConstellation(uint8_t gnssId) const {
 	return count;
 }
 
-double GPSFix::averageSNRUsed() const {
+double GPSFix::pubxAverageSNRUsed() const {
 	double sum = 0;
 	int count = 0;
 	for (const auto& sat : pubx03Almanac.satellites) {
@@ -438,7 +438,7 @@ double GPSFix::averageSNRUsed() const {
 	return count > 0 ? sum / count : 0;
 }
 
-double GPSFix::averageSNRAll() const {
+double GPSFix::pubxAverageSNRAll() const {
 	double sum = 0;
 	int count = 0;
 	for (const auto& sat : pubx03Almanac.satellites) {
@@ -500,7 +500,7 @@ std::string GPSFix::toString(){
 
 	ss << "========================== GPS FIX ================================" << endl
 		<< " Status: \t\t" << ((haslock) ? "LOCK!" : "SEARCHING...") << endl
-		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << visibleSatellites() << " (visible)" << endl
+		<< " Satellites: \t\t" << trackingSatellites << " (tracking) of " << gsvVisibleSatellites() << " (visible)" << endl
 		<< " < Fix Details >" << endl
 		<< "   Age:                " << timeSince(last_epoch).count() << " s" << endl
 		<< "   Timestamp:          " << last_epoch.toString() << "   UTC   \n\t\t\t(raw: " << last_epoch.rawTime << " time, " << last_epoch.rawDate << " date)" << endl
@@ -519,9 +519,9 @@ std::string GPSFix::toString(){
 	ss << "   Altitude:           " << altitude << " m" << endl
 		<< "   Speed:              " << speed << " km/h" << endl
 		<< "   Travel Dir:         " << travelAngle << " deg  [" << travelAngleToCompassDirection(travelAngle) << "]" << endl
-		<< "   SNR:                avg: " << averageSNR() << " dB   [min: " << minSNR() << " dB,  max:" << maxSNR() << " dB]" << endl;
+		<< "   GSV SNR:             avg: " << gsvAverageSNR() << " dB   [min: " << gsvMinSNR() << " dB,  max:" << gsvMaxSNR() << " dB]" << endl;
 
-	ss << " < Almanac (" << almanacPercentComplete() << "%) >" << endl;
+	ss << " < Almanac (" << gsvAlmanacPercentComplete() << "%) >" << endl;
 	if (almanacTable.empty()){
 		ss << " > No satellite info in almanac." << endl;
 	}

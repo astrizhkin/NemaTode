@@ -233,19 +233,20 @@ namespace nmea {
 
 		static std::string travelAngleToCompassDirection(double deg, bool abbrev = false);
 
-		uint32_t visibleSatellites();
-		double averageSNR();
-		double minSNR();
-		double maxSNR();
-		double almanacPercentComplete();
+		//GSV queries
+		uint32_t gsvVisibleSatellites();
+		double gsvAverageSNR();
+		double gsvMinSNR();
+		double gsvMaxSNR();
+		double gsvAlmanacPercentComplete();
 
 		// PUBX03 (SVSTATUS) queries
-		uint32_t countTracked() const;
-		uint32_t countUsedInFix() const;
-		uint32_t countUsedBySvid(uint32_t svid) const;
-		uint32_t countUsedByConstellation(uint8_t gnssId) const;
-		double averageSNRUsed() const;
-		double averageSNRAll() const;
+		uint32_t pubxCountTracked() const;
+		uint32_t pubxCountUsedInFix() const;
+		uint32_t pubxCountUsedBySvid(uint32_t svid) const;
+		uint32_t pubxCountUsedByConstellation(uint8_t gnssId) const;
+		double pubxAverageSNRUsed() const;
+		double pubxAverageSNRAll() const;
 	};
 
 }
